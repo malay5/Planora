@@ -1,38 +1,76 @@
-# Startup OS
+# Startup OS (Updated)
 
-## Credentials
-**Database**: Supabase
-**Status**: TEST (Credentials visible on Login)
+A modern, collaborative task management platform designed for startups. Built with Next.js 14 and MongoDB, offering a streamlined experience for managing projects, tasks, and teams.
 
-### Test Accounts
-- **Tech Lead**: `malay@startup.os` / `password123`
-- **Ops Lead**: `yougesh@startup.os` / `password123`
+## 🚀 Features
 
-### Database Access
-- **Connection String**: `postgresql://postgres:Blackcoat_password897@db.hboerklcnkmdehpodemx.supabase.co:5432/postgres`
+### Core Task Management
+- **Kanban Board**: Drag-and-drop interface for managing task status (Todo, In Progress, Review, Done).
+- **Backlog Management**: Dedicated view for backlog items with "Move to Backlog" reasoning.
+- **Rich Task Details**: Support for Story Points, Tags (parsed from description), and Priority levels.
+- **Soft Delete**: Tasks are moved to a Trash bin and can be restored or permanently deleted.
 
+### Collaboration & Teams
+- **Multi-Organization**: Users can create and switch between multiple organizations.
+- **Team Invitations**: Invite members via unique, secure links.
+- **Mentions & Notifications**: Mention users with `@username` in descriptions to trigger notifications.
+- **Action Logs**: Comprehensive audit trail of all activities (Task creation, updates, moves, deletions).
+- **Activity Feed**: View history of actions within the organization.
 
-## Architecture & Decisions
+### Technical Highlights
+- **Authentication**: Custom session-based auth using secure HTTP-only cookies.
+- **Database**: MongoDB with Mongoose for flexible data modeling.
+- **UI/UX**: "Dark Luxury" aesthetic using Tailwind CSS and shadcn/ui components.
+- **Performance**: Server Actions for mutation and Optimistic UI updates.
 
-### Database Connection Strategy
-**Decision**: Use Supabase Transactional Pooler (Port 6543) for serverless environments.
-**Context**: Next.js runs in a serverless environment (Vercel/Checkly), where managing persistent connections is difficult.
-- **Attempt 1**: Direct Connection (IPv4). **Failed**: Supabase project does not have IPv4 addon / DNS unresolvable.
-- **Attempt 2**: Transactional Pooler (Port 6543). **Failed**: Network Timeout (Firewall/ISP).
-- **Attempt 3**: Session Pooler (Port 5432). **Failed**: Network Timeout.
+## 🛠️ Tech Stack
 
-**Trade-offs**:
-- **Pooler vs Direct**: Poolers (PgBouncer) allow supporting thousands of temporary connections but introduce some limitations with Prepared Statements. We chose Transactional mode for best compatibility with Next.js server actions.
-- **Revisiting**: Current status is BLOCKED due to network connectivity. Functional verification of the UI is complete, but data persistence is currently unavailable.
+- **Framework**: Next.js 14 (App Router)
+- **Database**: MongoDB
+- **ORM**: Mongoose
+- **Styling**: Tailwind CSS
+- **Components**: shadcn/ui
+- **Icons**: Lucide React
 
-### Tech Stack Choices
-- **Next.js 14 App Router**: Chosen for modern React features (RSC) and SEO capabilities.
-- **Tailwind CSS (v4)**: For rapid, utility-first styling with minimal CSS bundle size.
-- **Supabase**: Chosen for "Backend-as-a-Service" speed (Auth + DB + Realtime).
-- **Shadcn/UI**: For accessible, high-quality component primitives that we can fully customize ("Dark Luxury" theme).
+## 🏁 Getting Started
 
-### Folder Structure
-- `startup-os/`: Subdirectory to avoid npm naming conflicts with parent folder.
-- `app/`: App Router structure.
-- `components/ui/`: Reusable UI components.
+### Prerequisites
+- Node.js 18+
+- MongoDB instance (Local or Atlas)
 
+### Installation
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd updated_startup_os
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Environment Setup**
+    Create a `.env.local` file in the root directory:
+   ```env
+   MONGODB_URI=mongodb://localhost:27017/startup_os
+   JWT_SECRET=your-super-secret-key-change-this
+   ```
+
+4. **Run the development server**
+   ```bash
+   npm run dev
+   # or
+   npx next dev
+   ```
+
+5. **Open the app**
+   Navigate to [http://localhost:3000](http://localhost:3000).
+
+## 🧪 Verification & Testing
+
+The application includes features for verifying system integrity:
+- **Action Logs**: Check `/dashboard/logs` to see backend events firing.
+- **Trash**: Check `/dashboard/trash` to verify soft-delete mechanics.
+- **Notifications**: Check `/dashboard/notifications` for mention alerts.
