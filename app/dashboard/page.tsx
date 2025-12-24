@@ -1,53 +1,32 @@
-import { getBoardData } from '@/app/actions/task';
-import KanbanBoard from '@/app/components/board/KanbanBoard';
-import { InviteMemberButton } from '@/app/components/InviteMemberButton';
+import { redirect } from 'next/navigation';
+import { getUserOrganizations } from '@/app/actions/org';
 
-export const dynamic = 'force-dynamic';
+export default async function DashboardRedirectPage() {
+    const orgs = await getUserOrganizations();
 
-export default async function DashboardPage() {
-    const { project, columns } = await getBoardData();
-
-    if (!project) {
+    if (orgs && orgs.length > 0) {
+        // Redirect to the first/active organization
+        // We could check for 'isActive' from session if available, 
+        // but getUserOrganizations returns a list.
+        // Let's defer to the first one or the "active" one if marked.
+        const activeOrg = orgs.find((o: any) => o.isActive) || orgs[0];
+        redirect(`/${activeOrg.id}`);
+    } else {
+        // No orgs, maybe redirect to onboarding or create org?
+        // Or stay here and show empty state?
+        // Let's assume we redirect to a create page or onboard.
+        // For now, let's redirect to /onboarding if it exists, or just show a text.
+        // Actually, if no orgs, sidebar might be empty.
+        // Let's redirect to /onboarding (assuming we will make one) or handle it.
+        // Creating an Org is usually done via modal.
+        // Let's redirect to `/create-organization` or just return a simple page.
+        // Return null for now or a message.
         return (
-            <div className="h-[calc(100vh-8rem)] flex items-center justify-center text-zinc-500">
-                <div>No project found. Create an organization to get started.</div>
+            <div className="flex flex-col items-center justify-center min-h-screen">
+                <p>No organizations found.</p>
+                {/* We could render OrgSwitcherDialog here if we made it standalone */}
+                <a href="/?create=true" className="text-primary underline">Go Home to Create</a>
             </div>
-        )
+        );
     }
-
-    // Serialize IDs for Client Component
-    // Mongoose IDs are objects, need strings for React props
-    const serializedColumns = Object.entries(columns).reduce((acc, [key, tasks]) => {
-        acc[key] = (tasks as any[]).map(t => {
-            const assignee = t.assignee as any;
-            return {
-                _id: t._id.toString(),
-                title: t.title,
-                type: t.type,
-                priority: t.priority,
-                order: t.order,
-                assignee: assignee ? {
-                    name: assignee.name,
-                    avatar_url: assignee.avatar_url,
-                } : undefined
-            };
-        });
-        return acc;
-    }, {} as any);
-
-    return (
-        <div className="h-[calc(100vh-8rem)] flex flex-col">
-            <div className="flex items-center justify-between mb-6">
-                <div>
-                    <h2 className="text-2xl font-bold tracking-tight">{project.name}</h2>
-                    <p className="text-zinc-500">{project.description}</p>
-                </div>
-                <InviteMemberButton orgId={project.org_id.toString()} />
-            </div>
-
-            <div className="flex-1 min-h-0">
-                <KanbanBoard initialColumns={serializedColumns} projectKey={project.key} />
-            </div>
-        </div>
-    );
 }

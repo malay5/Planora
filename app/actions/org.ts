@@ -2,7 +2,7 @@
 
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { Organization, Invitation, User, Project, OrgMembership } from '@/app/models';
+import { Organization, Invitation, User, Project, OrgMembership, Notification } from '@/app/models';
 import connectToDatabase from '@/app/lib/db';
 import { randomBytes } from 'crypto';
 import { getSession } from './auth';
@@ -128,7 +128,21 @@ export async function joinOrganization(prevState: any, formData: FormData) {
 
     await logAction(org._id.toString(), session.userId as string, 'joined org', org._id.toString(), 'Organization', `Joined organization ${org.name}`);
 
-    redirect('/dashboard');
+    // Notify other members
+    const otherMembers = org.members.filter((m: any) => m.toString() !== session.userId);
+    const notifications = otherMembers.map((memberId: any) => ({
+        user_id: memberId,
+        type: 'system',
+        content: `New member joined: ${username}`,
+        read: false,
+        timestamp: new Date()
+    }));
+
+    if (notifications.length > 0) {
+        await Notification.insertMany(notifications);
+    }
+
+    redirect(`/${org._id.toString()}/dashboard`);
 }
 
 export async function leaveOrganization(orgId: string) {
@@ -181,14 +195,32 @@ export async function getUserOrganizations() {
 
 export async function getOrgMembers(orgId: string) {
     await connectToDatabase();
+
+    // Try OrgMembership first (preferred for Phase 5+)
     const memberships = await OrgMembership.find({ org_id: orgId }).populate('user_id', 'name email avatar_url');
-    return memberships.map((m: any) => ({
-        userId: m.user_id._id.toString(),
-        name: m.user_id.name, // Real name
-        email: m.user_id.email,
-        username: m.org_username, // Org specific username
-        role: m.role,
-        joinedAt: m.joined_at
+
+    if (memberships && memberships.length > 0) {
+        return memberships.map((m: any) => ({
+            userId: m.user_id?._id.toString() || 'unknown', // Handle potential null if user deleted
+            name: m.user_id?.name || 'Unknown User',
+            email: m.user_id?.email,
+            username: m.org_username,
+            role: m.role,
+            joinedAt: m.joined_at
+        })).filter(m => m.userId !== 'unknown');
+    }
+
+    // Fallback: Fetch from Organization.members (legacy/migration support)
+    const org = await Organization.findById(orgId).populate('members', 'name email avatar_url');
+    if (!org) return [];
+
+    return (org.members as any[]).map((user: any) => ({
+        userId: user._id.toString(),
+        name: user.name,
+        email: user.email,
+        username: user.name?.replace(/\s+/g, '').toLowerCase() || 'user', // Fallback username
+        role: 'member', // Default role
+        joinedAt: new Date() // Fallback date
     }));
 }
 
@@ -219,5 +251,5 @@ export async function switchOrganization(orgId: string) {
     const cookieStore = await cookies();
     cookieStore.set('session', newSessionToken, { expires, httpOnly: true });
 
-    redirect('/dashboard');
+    return { success: true };
 }

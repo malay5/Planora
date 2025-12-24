@@ -2,11 +2,11 @@
 
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, ListTodo, Settings, LogOut, ChevronRight, Briefcase } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Settings, LogOut, ChevronRight, Briefcase, Bell, Activity, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { OrgNavigation } from './sidebar/OrgNavigation';
 
-export function Sidebar() {
+export function Sidebar({ orgId }: { orgId: string }) {
     const [isHovered, setIsHovered] = useState(false);
 
     return (
@@ -23,20 +23,25 @@ export function Sidebar() {
             </div>
 
             <div className="flex-1 py-4 flex flex-col gap-2 overflow-x-hidden">
-                <NavItem href="/dashboard" icon={<LayoutDashboard size={20} />} label="Board" isHovered={isHovered} />
-                <NavItem href="/dashboard/backlog" icon={<ListTodo size={20} />} label="Backlog" isHovered={isHovered} />
+                <NavItem href={`/${orgId}/dashboard`} icon={<LayoutDashboard size={20} />} label="Board" isHovered={isHovered} />
+                <NavItem href={`/${orgId}/backlog`} icon={<ListTodo size={20} />} label="Backlog" isHovered={isHovered} />
 
                 <div className={cn("my-2 border-t border-sidebar-border mx-4 transition-opacity", !isHovered && "opacity-0 group-hover:opacity-100")} />
 
-                {isHovered && (
-                    <div className="mt-2 px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider animate-in fade-in slide-in-from-left-2">
-                        Platform
-                    </div>
-                )}
+                <div className="flex flex-col gap-2">
+                    {isHovered && (
+                        <div className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider animate-in fade-in slide-in-from-left-2">
+                            Platform
+                        </div>
+                    )}
+                    <NavItem href={`/${orgId}/notifications`} icon={<Bell size={20} />} label="Notifications" isHovered={isHovered} />
+                    <NavItem href={`/${orgId}/logs`} icon={<Activity size={20} />} label="Activity" isHovered={isHovered} />
+                    <NavItem href={`/${orgId}/trash`} icon={<Trash2 size={20} />} label="Trash" isHovered={isHovered} />
+                </div>
             </div>
 
             <div className="p-2 border-t border-sidebar-border mt-auto">
-                <NavItem href="/dashboard/settings" icon={<Settings size={20} />} label="Settings" isHovered={isHovered} />
+                <NavItem href={`/${orgId}/settings`} icon={<Settings size={20} />} label="Settings" isHovered={isHovered} />
             </div>
         </aside>
     );

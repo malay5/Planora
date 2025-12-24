@@ -32,6 +32,7 @@ interface Task {
     taskId?: string;
     story_points?: number;
     assignee?: {
+        _id?: string;
         name: string;
         avatar_url: string;
     };
@@ -41,9 +42,10 @@ interface TaskSheetProps {
     task: Task | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    members?: any[];
 }
 
-export function TaskSheet({ task, open, onOpenChange }: TaskSheetProps) {
+export function TaskSheet({ task, open, onOpenChange, members }: TaskSheetProps) {
     if (!task) return null;
 
     const handleSubmit = async (formData: FormData) => {
@@ -107,6 +109,9 @@ export function TaskSheet({ task, open, onOpenChange }: TaskSheetProps) {
                                 </SelectContent>
                             </Select>
                         </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-1.5">
                             <Label className="text-xs font-semibold text-muted-foreground">Type</Label>
                             <Select name="type" defaultValue={task.type}>
@@ -132,6 +137,25 @@ export function TaskSheet({ task, open, onOpenChange }: TaskSheetProps) {
                                 min="0"
                             />
                         </div>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <Label className="text-xs font-semibold text-muted-foreground">Assignee</Label>
+                        <Select name="assignee" defaultValue={task.assignee?._id || ''}>
+                            <SelectTrigger className="bg-muted/50 border-border">
+                                <SelectValue placeholder="Unassigned" />
+                            </SelectTrigger>
+                            <SelectContent className="bg-popover border-border">
+                                <SelectItem value="unassigned">Unassigned</SelectItem>
+                                {members?.map((m: any) => (
+                                    <SelectItem key={m.userId} value={m.userId}>
+                                        <div className="flex items-center gap-2">
+                                            {m.name}
+                                        </div>
+                                    </SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
 
                     <div className="space-y-2 pt-4">

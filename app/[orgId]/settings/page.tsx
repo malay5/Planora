@@ -3,8 +3,9 @@
 import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Moon, Sun } from "lucide-react";
+import { Moon, Sun, ChevronRight } from "lucide-react";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 export default function SettingsPage() {
     const { theme, setTheme } = useTheme();
@@ -76,6 +77,20 @@ export default function SettingsPage() {
                             </div>
                         </div>
                     </CardContent>
+                </Card>
+
+                <Card className="cursor-pointer hover:bg-muted/50 transition-colors">
+                    <Link href="/dashboard/settings/organization">
+                        <CardHeader className="flex flex-row items-center justify-between">
+                            <div className="space-y-1">
+                                <CardTitle>Organization Settings</CardTitle>
+                                <CardDescription>
+                                    Manage members, invites, and organization details.
+                                </CardDescription>
+                            </div>
+                            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                        </CardHeader>
+                    </Link>
                 </Card>
 
                 <Card>

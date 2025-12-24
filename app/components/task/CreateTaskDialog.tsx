@@ -38,12 +38,15 @@ function SubmitButton() {
 import { useRouter } from 'next/navigation';
 import { useTransition } from 'react';
 
-export function CreateTaskDialog() {
+export function CreateTaskDialog({ projectId }: { projectId?: string }) {
     const [open, setOpen] = useState(false);
     const router = useRouter();
     const [isPending, startTransition] = useTransition();
 
     async function handleSubmit(formData: FormData) {
+        if (projectId) {
+            formData.append('projectId', projectId);
+        }
         await createTask(null, formData);
         setOpen(false);
         startTransition(() => {

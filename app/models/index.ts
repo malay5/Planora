@@ -41,6 +41,9 @@ export interface IProject extends Document {
     org_id: mongoose.Types.ObjectId;
     description?: string;
     task_count: number;
+    is_private: boolean;
+    members: mongoose.Types.ObjectId[];
+    invite_code?: string;
 }
 
 const ProjectSchema = new Schema<IProject>({
@@ -49,6 +52,9 @@ const ProjectSchema = new Schema<IProject>({
     org_id: { type: Schema.Types.ObjectId, ref: 'Organization', required: true },
     description: { type: String },
     task_count: { type: Number, default: 0 },
+    is_private: { type: Boolean, default: false },
+    members: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    invite_code: { type: String, unique: true, sparse: true }
 }, { timestamps: true });
 
 export const Project: Model<IProject> = mongoose.models.Project || mongoose.model<IProject>('Project', ProjectSchema);

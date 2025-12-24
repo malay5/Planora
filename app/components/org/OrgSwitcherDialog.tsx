@@ -28,12 +28,16 @@ export function OrgSwitcherDialog({ trigger, isHovered }: { trigger?: React.Reac
     const [orgs, setOrgs] = useState<Org[]>([]);
     const [loading, setLoading] = useState(false);
     const [newOrgName, setNewOrgName] = useState('');
+    const [error, setError] = useState('');
     const [mode, setMode] = useState<'switch' | 'create'>('switch');
     const router = useRouter();
 
     useEffect(() => {
         if (open) {
             loadOrgs();
+            setError('');
+            setNewOrgName('');
+            setMode('switch');
         }
     }, [open]);
 
@@ -44,14 +48,17 @@ export function OrgSwitcherDialog({ trigger, isHovered }: { trigger?: React.Reac
 
     const handleSwitch = async (orgId: string) => {
         setLoading(true);
-        await switchOrganization(orgId);
+        const result = await switchOrganization(orgId);
+        if (result?.success) {
+            setOpen(false);
+            window.location.href = `/${orgId}/dashboard`;
+        }
         setLoading(false);
-        setOpen(false);
-        router.refresh();
     };
 
     const handleCreate = async (e: React.FormEvent) => {
         e.preventDefault();
+        setError('');
         setLoading(true);
         const formData = new FormData();
         formData.append('orgName', newOrgName);
@@ -62,7 +69,9 @@ export function OrgSwitcherDialog({ trigger, isHovered }: { trigger?: React.Reac
             setOpen(false);
             setMode('switch');
             setNewOrgName('');
-            router.refresh();
+            window.location.href = `/${result.orgId}/dashboard`;
+        } else if (result?.error) {
+            setError(result.error);
         }
         setLoading(false);
     };
@@ -133,6 +142,7 @@ export function OrgSwitcherDialog({ trigger, isHovered }: { trigger?: React.Reac
                                 required
                             />
                         </div>
+                        {error && <div className="text-sm text-red-500">{error}</div>}
                         <div className="flex gap-2 justify-end">
                             <Button type="button" variant="ghost" onClick={() => setMode('switch')}>
                                 Cancel

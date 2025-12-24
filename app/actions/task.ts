@@ -1,21 +1,41 @@
 'use server';
 
 import connectToDatabase from '@/app/lib/db';
-import { Task, Project, ActionLog, OrgMembership, User, Notification } from '@/app/models';
+import { Task, Project, ActionLog, OrgMembership, User, Notification, Organization } from '@/app/models';
 import { randomBytes } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { getSession } from './auth';
 import { logAction } from './log';
 
-export async function getBoardData() {
+export async function getBoardData(orgId?: string, projectId?: string) {
     try {
         const session = await getSession();
-        if (!session) throw new Error('Unauthorized');
+        if (!session) return { project: null, columns: {} };
 
         await connectToDatabase();
 
-        // Find primary project for the org
-        const projectDoc = await Project.findOne({ org_id: session.orgId } as any).lean();
+        const targetOrgId = orgId || session.orgId;
+
+        // Verify membership if orgId is provided and different
+        if (orgId && orgId !== session.orgId) {
+            const isMember = await Organization.exists({ _id: orgId, members: session.userId });
+            if (!isMember) return { project: null, columns: {} };
+        }
+
+        let projectDoc;
+        if (projectId) {
+            projectDoc = await Project.findOne({ _id: projectId, org_id: targetOrgId }).lean();
+        }
+
+        if (!projectDoc) {
+            // Find primary project for the org
+            projectDoc = await Project.findOne({ org_id: targetOrgId, key: 'GEN' }).lean();
+
+            // Fallback to any project if GEN not found
+            if (!projectDoc) {
+                projectDoc = await Project.findOne({ org_id: targetOrgId }).sort({ _id: 1 }).lean();
+            }
+        }
 
         if (!projectDoc) return { project: null, columns: {} };
 
@@ -38,10 +58,55 @@ export async function getBoardData() {
             'Done': tasks.filter((t: any) => t.status === 'Done'),
         };
 
-        return { project, columns };
+        return {
+            project: { ...project, org_id: targetOrgId },
+            columns
+        };
     } catch (error) {
         console.error("Error in getBoardData:", error);
         return { project: null, columns: {} };
+    }
+}
+
+export async function getOrgProjects(orgId: string) {
+    await connectToDatabase();
+    const session = await getSession();
+    if (!session) return [];
+
+    // Verify member
+    const isMember = await Organization.exists({ _id: orgId, members: session.userId });
+    if (!isMember) return [];
+
+    const projects = await Project.find({ org_id: orgId }).sort({ createdAt: 1 }).lean();
+    return JSON.parse(JSON.stringify(projects));
+}
+
+export async function createProject(prevState: any, formData: FormData) {
+    await connectToDatabase();
+    const session = await getSession();
+    if (!session) return { error: 'Unauthorized' };
+
+    const name = formData.get('name') as string;
+    const description = formData.get('description') as string;
+
+    if (!name) return { error: 'Name is required' };
+
+    const projectKey = name.replace(/[^a-zA-Z]/g, '').substring(0, 3).toUpperCase() + Math.floor(Math.random() * 100);
+
+    try {
+        const project = await Project.create({
+            name,
+            key: projectKey,
+            description,
+            org_id: session.orgId,
+            task_count: 0
+        });
+
+        revalidatePath(`/${session.orgId}`);
+        return { success: true, projectId: project._id.toString() };
+    } catch (e) {
+        console.error(e);
+        return { error: 'Failed to create project' };
     }
 }
 
@@ -60,7 +125,9 @@ export async function updateTaskStatus(taskId: string, newStatus: string, newInd
         await logAction(session.orgId as string, session.userId as string, 'moved task', taskId, 'Task', `Moved task to ${newStatus}`);
     }
 
-    revalidatePath('/dashboard');
+    if (session) {
+        revalidatePath(`/${session.orgId}/dashboard`);
+    }
 }
 
 export async function createTask(prevState: any, formData: FormData) {
@@ -113,7 +180,9 @@ export async function createTask(prevState: any, formData: FormData) {
     // Process Mentions
     await processMentions(description, session.orgId as string, taskId, session.userId as string);
 
-    revalidatePath('/dashboard');
+    if (session) {
+        revalidatePath(`/${session.orgId}/dashboard`);
+    }
     return { message: 'Task created' };
 }
 
@@ -135,20 +204,23 @@ export async function updateTask(taskId: string, formData: FormData) {
     const finalTags = Array.from(new Set([...tags, ...hashtags]));
 
     const backlog_reason = formData.get('backlog_reason') as string;
+    const assigneeId = formData.get('assignee') as string;
 
     const updateData: any = {
         title,
         description,
-        type,
-        priority,
-        status,
         tags: finalTags,
-        story_points
     };
 
-    if (backlog_reason) {
-        updateData.backlog_reason = backlog_reason;
+    if (assigneeId !== null && assigneeId !== undefined) {
+        updateData.assignee = assigneeId || null;
     }
+
+    if (type) updateData.type = type;
+    if (priority) updateData.priority = priority;
+    if (status) updateData.status = status;
+    if (storyPointsStr) updateData.story_points = story_points;
+    if (backlog_reason) updateData.backlog_reason = backlog_reason;
 
     await Task.findByIdAndUpdate(taskId, updateData);
 
@@ -160,7 +232,9 @@ export async function updateTask(taskId: string, formData: FormData) {
         await processMentions(description, session.orgId as string, taskId, session.userId as string);
     }
 
-    revalidatePath('/dashboard');
+    if (session) {
+        revalidatePath(`/${session.orgId}/dashboard`);
+    }
 }
 
 export async function deleteTask(taskId: string) {
@@ -173,7 +247,9 @@ export async function deleteTask(taskId: string) {
         await logAction(session.orgId as string, session.userId as string, 'deleted task', taskId, 'Task', `Moved task ${taskId} to trash`);
     }
 
-    revalidatePath('/dashboard');
+    if (session) {
+        revalidatePath(`/${session.orgId}/dashboard`);
+    }
     return { message: 'Task moved to trash' };
 }
 
@@ -207,8 +283,10 @@ export async function restoreTask(taskId: string) {
         await logAction(session.orgId as string, session.userId as string, 'restored task', taskId, 'Task', `Restored task ${taskId} from trash`);
     }
 
-    revalidatePath('/dashboard');
-    revalidatePath('/dashboard/trash');
+    if (session) {
+        revalidatePath(`/${session.orgId}/dashboard`);
+    }
+    if (session) revalidatePath(`/${session.orgId}/trash`);
 }
 
 export async function permanentlyDeleteTask(taskId: string) {
@@ -221,7 +299,7 @@ export async function permanentlyDeleteTask(taskId: string) {
         await logAction(session.orgId as string, session.userId as string, 'permanently deleted task', taskId, 'Task', `Permanently deleted task ${taskId}`);
     }
 
-    revalidatePath('/dashboard/trash');
+    if (session) revalidatePath(`/${session.orgId}/trash`);
 }
 
 async function processMentions(
