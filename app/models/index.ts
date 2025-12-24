@@ -7,6 +7,8 @@ export interface IUser extends Document {
     password_hash: string;
     role: string;
     avatar_url?: string;
+    bio?: string;
+    title?: string;
 }
 
 const UserSchema = new Schema<IUser>({
@@ -15,9 +17,32 @@ const UserSchema = new Schema<IUser>({
     password_hash: { type: String, required: true },
     role: { type: String, default: 'member' },
     avatar_url: { type: String },
+    bio: { type: String },
+    title: { type: String },
 }, { timestamps: true });
 
 export const User: Model<IUser> = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
+
+// ... (Organization Schema skipped)
+
+// --- OrgMembership Schema (Phase 5) ---
+export interface IOrgMembership extends Document {
+    org_id: mongoose.Types.ObjectId;
+    user_id: mongoose.Types.ObjectId;
+    org_username: string; // Unique within the org
+    role: string;
+    joined_at: Date;
+    tags: string[];
+}
+
+const OrgMembershipSchema = new Schema<IOrgMembership>({
+    org_id: { type: Schema.Types.ObjectId, ref: 'Organization', required: true },
+    user_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    org_username: { type: String, required: true },
+    role: { type: String, default: 'member' },
+    joined_at: { type: Date, default: Date.now },
+    tags: { type: [String], default: [] },
+});
 
 // --- Organization Schema ---
 export interface IOrganization extends Document {
@@ -138,22 +163,7 @@ const CommentSchema = new Schema<IComment>({
 
 export const Comment: Model<IComment> = mongoose.models.Comment || mongoose.model<IComment>('Comment', CommentSchema);
 
-// --- OrgMembership Schema (Phase 5) ---
-export interface IOrgMembership extends Document {
-    org_id: mongoose.Types.ObjectId;
-    user_id: mongoose.Types.ObjectId;
-    org_username: string; // Unique within the org
-    role: string;
-    joined_at: Date;
-}
 
-const OrgMembershipSchema = new Schema<IOrgMembership>({
-    org_id: { type: Schema.Types.ObjectId, ref: 'Organization', required: true },
-    user_id: { type: Schema.Types.ObjectId, ref: 'User', required: true },
-    org_username: { type: String, required: true },
-    role: { type: String, default: 'member' },
-    joined_at: { type: Date, default: Date.now },
-});
 
 // Compound unique index to ensure usernames are unique per org
 OrgMembershipSchema.index({ org_id: 1, org_username: 1 }, { unique: true });
@@ -194,6 +204,8 @@ export interface INotification extends Document {
     link?: string;
     read: boolean;
     timestamp: Date;
+    related_entity_id?: mongoose.Types.ObjectId;
+    related_entity_type?: string;
 }
 
 const NotificationSchema = new Schema<INotification>({
@@ -204,6 +216,8 @@ const NotificationSchema = new Schema<INotification>({
     link: { type: String },
     read: { type: Boolean, default: false },
     timestamp: { type: Date, default: Date.now },
+    related_entity_id: { type: Schema.Types.ObjectId },
+    related_entity_type: { type: String },
 });
 
 export const Notification: Model<INotification> = mongoose.models.Notification || mongoose.model<INotification>('Notification', NotificationSchema);

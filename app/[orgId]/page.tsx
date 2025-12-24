@@ -10,6 +10,21 @@ export default async function OrgTeamsPage({ params }: { params: Promise<{ orgId
     const session = await getSession();
     const projects = await getOrgProjects(orgId);
 
+    if (!projects || projects.length === 0) {
+        // Fallback to check if it's just empty or invalid?
+        // Since getOrgProjects handles validation and auth, empty array likely means invalid/no-access.
+        // (Valid orgs usually have at least 'General' project created on signup).
+        return (
+            <div className="h-[calc(100vh-4rem)] flex flex-col items-center justify-center space-y-4">
+                <h1 className="text-2xl font-bold">Organization Not Found</h1>
+                <p className="text-muted-foreground">The organization you are looking for does not exist or you do not have access.</p>
+                <Link href="/" className="text-primary hover:underline">
+                    Return to Home
+                </Link>
+            </div>
+        );
+    }
+
     return (
         <div className="p-8 space-y-8 max-w-7xl mx-auto">
             <div className="flex items-center justify-between">

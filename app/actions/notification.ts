@@ -13,14 +13,14 @@ export async function getNotifications(page = 1) {
     const limit = 10;
     const skip = (page - 1) * limit;
 
-    const notifications = await Notification.find({ user_id: session.userId, org_id: session.orgId } as any)
+    const notifications = await Notification.find({ user_id: session.userId as string, org_id: session.orgId as string } as any)
         .sort({ timestamp: -1 })
         .skip(skip)
         .limit(limit)
         .lean();
 
-    const count = await Notification.countDocuments({ user_id: session.userId, org_id: session.orgId } as any);
-    const unreadCount = await Notification.countDocuments({ user_id: session.userId, org_id: session.orgId, read: false } as any);
+    const count = await Notification.countDocuments({ user_id: session.userId as string, org_id: session.orgId as string } as any);
+    const unreadCount = await Notification.countDocuments({ user_id: session.userId as string, org_id: session.orgId as string, read: false } as any);
 
     return {
         notifications: JSON.parse(JSON.stringify(notifications)),
@@ -35,7 +35,7 @@ export async function markAsRead(notificationId: string) {
     if (!session) return;
 
     await Notification.updateOne(
-        { _id: notificationId, user_id: session.userId } as any,
+        { _id: notificationId, user_id: session.userId as string } as any,
         { read: true }
     );
 
@@ -49,7 +49,7 @@ export async function markAllAsRead() {
     if (!session) return;
 
     await Notification.updateMany(
-        { user_id: session.userId, org_id: session.orgId, read: false } as any,
+        { user_id: session.userId as string, org_id: session.orgId as string, read: false } as any,
         { read: true }
     );
 

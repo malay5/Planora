@@ -14,7 +14,7 @@ export async function addComment(taskId: string, content: string) {
     try {
         const comment = await Comment.create({
             task_id: taskId,
-            user_id: session.userId,
+            user_id: session.userId as string,
             content,
         });
 

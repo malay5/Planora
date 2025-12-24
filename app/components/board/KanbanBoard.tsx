@@ -21,15 +21,10 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { BacklogReasonDialog } from '@/app/components/task/BacklogReasonDialog';
 import { TaskSheet } from '@/app/components/task/TaskSheet';
+import { UserHoverCard } from '@/app/components/user/UserHoverCard';
 import { cn } from '@/lib/utils';
 import { motion } from 'framer-motion';
 import { Filter, UserCircle, AlertCircle } from 'lucide-react';
@@ -318,9 +313,16 @@ export default function KanbanBoard({ initialColumns, projectKey, members, curre
                                                                             <div className="flex items-center justify-between mt-auto">
                                                                                 <div className="flex items-center gap-2">
                                                                                     {task.assignee ? (
-                                                                                        <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-[10px] font-bold text-white shadow-inner" title={task.assignee.name}>
-                                                                                            {task.assignee.name.charAt(0)}
-                                                                                        </div>
+                                                                                        <UserHoverCard user={{
+                                                                                            ...task.assignee,
+                                                                                            // Merge with richer member data if available
+                                                                                            ...members.find(m => m.userId === task.assignee?._id),
+                                                                                            name: task.assignee.name // Ensure name is preserved
+                                                                                        }}>
+                                                                                            <div className="w-6 h-6 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex items-center justify-center text-[10px] font-bold text-white shadow-inner cursor-pointer" title={task.assignee.name}>
+                                                                                                {task.assignee.name.charAt(0)}
+                                                                                            </div>
+                                                                                        </UserHoverCard>
                                                                                     ) : (
                                                                                         <div className="w-6 h-6 rounded-full bg-muted border border-border flex items-center justify-center" title="Unassigned" />
                                                                                     )}

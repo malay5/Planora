@@ -4,10 +4,14 @@ import { useState } from 'react';
 import { cn } from '@/lib/utils';
 import { LayoutDashboard, ListTodo, Settings, LogOut, ChevronRight, Briefcase, Bell, Activity, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { OrgNavigation } from './sidebar/OrgNavigation';
 
 export function Sidebar({ orgId }: { orgId: string }) {
     const [isHovered, setIsHovered] = useState(false);
+    const searchParams = useSearchParams();
+    const projectId = searchParams.get('projectId');
+    const isTeamContext = !!projectId;
 
     return (
         <aside
@@ -23,35 +27,74 @@ export function Sidebar({ orgId }: { orgId: string }) {
             </div>
 
             <div className="flex-1 py-4 flex flex-col gap-2 overflow-x-hidden">
-                <NavItem href={`/${orgId}/dashboard`} icon={<LayoutDashboard size={20} />} label="Board" isHovered={isHovered} />
-                <NavItem href={`/${orgId}/backlog`} icon={<ListTodo size={20} />} label="Backlog" isHovered={isHovered} />
+                {isTeamContext ? (
+                    <>
+                        {isHovered && (
+                            <div className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider animate-in fade-in">
+                                Team
+                            </div>
+                        )}
+                        <NavItem
+                            href={`/${orgId}/dashboard?projectId=${projectId}`}
+                            icon={<LayoutDashboard size={20} />}
+                            label="Board"
+                            isHovered={isHovered}
+                            isActive={true}
+                        />
+                        <NavItem
+                            href={`/${orgId}/backlog?projectId=${projectId}`}
+                            icon={<ListTodo size={20} />}
+                            label="Backlog"
+                            isHovered={isHovered}
+                        />
+                        <NavItem
+                            href={`/${orgId}/settings/team/${projectId}`}
+                            icon={<Settings size={20} />}
+                            label="Team Settings"
+                            isHovered={isHovered}
+                        />
+                        <div className={cn("my-2 border-t border-sidebar-border mx-4 transition-opacity", !isHovered && "opacity-0")} />
+                        <NavItem
+                            href={`/${orgId}`}
+                            icon={<ChevronRight size={20} className="rotate-180" />}
+                            label="Back to All Teams"
+                            isHovered={isHovered}
+                        />
+                    </>
+                ) : (
+                    <>
+                        {isHovered && (
+                            <div className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider animate-in fade-in">
+                                Organization
+                            </div>
+                        )}
+                        <NavItem href={`/${orgId}`} icon={<Briefcase size={20} />} label="Teams" isHovered={isHovered} />
+                        <NavItem href={`/${orgId}/logs`} icon={<Activity size={20} />} label="Activity" isHovered={isHovered} />
+                        <NavItem href={`/${orgId}/settings`} icon={<Settings size={20} />} label="Org Settings" isHovered={isHovered} />
+                    </>
+                )}
 
-                <div className={cn("my-2 border-t border-sidebar-border mx-4 transition-opacity", !isHovered && "opacity-0 group-hover:opacity-100")} />
+                <div className={cn("my-2 border-t border-sidebar-border mx-4 transition-opacity", !isHovered && "opacity-0")} />
 
                 <div className="flex flex-col gap-2">
                     {isHovered && (
-                        <div className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider animate-in fade-in slide-in-from-left-2">
-                            Platform
+                        <div className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider animate-in fade-in">
+                            General
                         </div>
                     )}
                     <NavItem href={`/${orgId}/notifications`} icon={<Bell size={20} />} label="Notifications" isHovered={isHovered} />
-                    <NavItem href={`/${orgId}/logs`} icon={<Activity size={20} />} label="Activity" isHovered={isHovered} />
                     <NavItem href={`/${orgId}/trash`} icon={<Trash2 size={20} />} label="Trash" isHovered={isHovered} />
                 </div>
-            </div>
-
-            <div className="p-2 border-t border-sidebar-border mt-auto">
-                <NavItem href={`/${orgId}/settings`} icon={<Settings size={20} />} label="Settings" isHovered={isHovered} />
             </div>
         </aside>
     );
 }
 
-function NavItem({ href, icon, label, isHovered }: { href: string, icon: React.ReactNode, label: string, isHovered: boolean }) {
+function NavItem({ href, icon, label, isHovered, isActive = false }: { href: string, icon: React.ReactNode, label: string, isHovered: boolean, isActive?: boolean }) {
     return (
         <Link href={href} className={cn(
             "flex items-center gap-3 px-3 py-2 mx-2 rounded-lg transition-colors group relative",
-            "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
+            isActive ? "bg-sidebar-accent text-sidebar-accent-foreground" : "text-sidebar-foreground/70 hover:text-sidebar-foreground hover:bg-sidebar-accent",
             !isHovered && "justify-center"
         )}>
             <span className="shrink-0">{icon}</span>

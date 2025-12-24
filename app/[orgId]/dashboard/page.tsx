@@ -4,6 +4,9 @@ import { getOrgMembers } from '@/app/actions/org';
 import KanbanBoard from '@/app/components/board/KanbanBoard';
 import { InviteMemberButton } from '@/app/components/InviteMemberButton';
 import { getSession } from '@/app/actions/auth';
+import { Settings } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 
 export const dynamic = 'force-dynamic';
 
@@ -55,6 +58,11 @@ export default async function DashboardPage({ params, searchParams }: { params: 
                     <p className="text-zinc-500">{project.description}</p>
                 </div>
                 <div className="flex items-center gap-2">
+                    <Link href={`/${orgId}/settings/team/${project._id}`}>
+                        <Button variant="outline" size="icon">
+                            <Settings className="h-4 w-4" />
+                        </Button>
+                    </Link>
                     <CreateTaskDialog projectId={project._id} />
                     <InviteMemberButton orgId={orgId} />
                 </div>
@@ -65,7 +73,7 @@ export default async function DashboardPage({ params, searchParams }: { params: 
                     initialColumns={serializedColumns}
                     projectKey={project.key}
                     members={members}
-                    currentUserId={session.userId}
+                    currentUserId={session.userId as string}
                 />
             </div>
         </div>

@@ -1,5 +1,5 @@
 import { JoinForm } from './JoinForm';
-import { Invitation, Organization } from '@/app/models';
+import { Invitation, Organization, User } from '@/app/models';
 import connectToDatabase from '@/app/lib/db';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -49,6 +49,10 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
         );
     }
     const session = await getSession();
+    let user = null;
+    if (session) {
+        user = await User.findById(session.userId as string);
+    }
 
     return (
         <div className="min-h-screen flex items-center justify-center bg-black text-white p-4">
@@ -62,7 +66,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
                 <CardContent className="space-y-4">
                     {session ? (
                         <div className="text-center text-sm text-zinc-300">
-                            Logged in as <span className="font-semibold text-white">{session.email}</span>
+                            Logged in as <span className="font-semibold text-white">{user?.email}</span>
                         </div>
                     ) : (
                         <div className="p-4 bg-zinc-800/50 rounded-lg text-sm text-zinc-300 mb-4">

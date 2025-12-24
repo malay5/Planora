@@ -28,18 +28,18 @@ export async function createOrganization(prevState: any, formData: FormData) {
         const org: any = await (Organization as any).create({
             name,
             slug,
-            members: [session.userId],
+            members: [session.userId as string],
         });
 
         // Create OrgMembership for the creator
         // Default username to their global name for now, handling duplicates if needed? 
         // Creator usually gets their name.
-        const user = await User.findById(session.userId);
+        const user = await User.findById(session.userId as string);
         const orgUsername = user ? user.name.replace(/\s+/g, '').toLowerCase() : 'user' + Math.floor(Math.random() * 1000);
 
         await (OrgMembership as any).create({
             org_id: org._id,
-            user_id: session.userId,
+            user_id: session.userId as string,
             org_username: orgUsername,
             role: 'owner'
         });
@@ -68,7 +68,7 @@ export async function generateInviteLink(orgId: string) {
     if (!session) throw new Error('Unauthorized');
 
     // Check if user is member of org
-    const org: any = await Organization.findOne({ _id: orgId, members: session.userId } as any);
+    const org: any = await Organization.findOne({ _id: orgId, members: session.userId as string } as any);
     if (!org) throw new Error('Unauthorized');
 
     const token = randomBytes(32).toString('hex');
@@ -76,7 +76,7 @@ export async function generateInviteLink(orgId: string) {
     await (Invitation as any).create({
         token,
         organization_id: orgId,
-        inviter_id: session.userId,
+        inviter_id: session.userId as string,
     });
 
     // In prod, use actual domain
@@ -109,14 +109,14 @@ export async function joinOrganization(prevState: any, formData: FormData) {
     }
 
     // Add user to org if not already there
-    const isMember = org.members.some((m: any) => m.toString() === session.userId);
+    const isMember = org.members.some((m: any) => m.toString() === session.userId as string);
     if (!isMember) {
-        org.members.push(session.userId);
+        org.members.push(session.userId as string);
         await org.save();
 
         await (OrgMembership as any).create({
             org_id: org._id,
-            user_id: session.userId,
+            user_id: session.userId as string,
             org_username: username,
             role: 'member'
         });
@@ -129,7 +129,7 @@ export async function joinOrganization(prevState: any, formData: FormData) {
     await logAction(org._id.toString(), session.userId as string, 'joined org', org._id.toString(), 'Organization', `Joined organization ${org.name}`);
 
     // Notify other members
-    const otherMembers = org.members.filter((m: any) => m.toString() !== session.userId);
+    const otherMembers = org.members.filter((m: any) => m.toString() !== session.userId as string);
     const notifications = otherMembers.map((memberId: any) => ({
         user_id: memberId,
         type: 'system',
@@ -155,11 +155,11 @@ export async function leaveOrganization(orgId: string) {
     if (!org) return { error: 'Organization not found' };
 
     // Remove from Organization.members
-    org.members = org.members.filter((m: any) => m.toString() !== session.userId);
+    org.members = org.members.filter((m: any) => m.toString() !== session.userId as string);
     await org.save();
 
     // Remove OrgMembership
-    await (OrgMembership as any).deleteOne({ org_id: orgId, user_id: session.userId });
+    await (OrgMembership as any).deleteOne({ org_id: orgId, user_id: session.userId as string });
 
     await logAction(org._id.toString(), session.userId as string, 'left org', org._id.toString(), 'Organization', `Left organization ${org.name}`);
 
@@ -171,7 +171,7 @@ export async function getOrganizationDetails() {
     if (!session) return null;
 
     await connectToDatabase();
-    const org = await Organization.findById(session.orgId).lean();
+    const org = await Organization.findById(session.orgId as string).lean();
     return JSON.parse(JSON.stringify(org));
 }
 
@@ -181,7 +181,7 @@ export async function getUserOrganizations() {
 
     await connectToDatabase();
     // Return all orgs where user is a member
-    const orgs: any = await Organization.find({ members: session.userId } as any)
+    const orgs: any = await Organization.find({ members: session.userId as string } as any)
         .select('_id name slug')
         .lean();
 
@@ -189,7 +189,7 @@ export async function getUserOrganizations() {
         id: org._id.toString(),
         name: org.name,
         slug: org.slug,
-        isActive: org._id.toString() === session.orgId
+        isActive: org._id.toString() === session.orgId as string
     }));
 }
 
@@ -197,16 +197,20 @@ export async function getOrgMembers(orgId: string) {
     await connectToDatabase();
 
     // Try OrgMembership first (preferred for Phase 5+)
-    const memberships = await OrgMembership.find({ org_id: orgId }).populate('user_id', 'name email avatar_url');
+    const memberships = await OrgMembership.find({ org_id: orgId }).populate('user_id', 'name email avatar_url bio title');
 
     if (memberships && memberships.length > 0) {
         return memberships.map((m: any) => ({
             userId: m.user_id?._id.toString() || 'unknown', // Handle potential null if user deleted
             name: m.user_id?.name || 'Unknown User',
             email: m.user_id?.email,
+            avatar_url: m.user_id?.avatar_url,
             username: m.org_username,
             role: m.role,
-            joinedAt: m.joined_at
+            joinedAt: m.joined_at,
+            bio: m.user_id?.bio,
+            title: m.user_id?.title,
+            tags: m.tags || []
         })).filter(m => m.userId !== 'unknown');
     }
 
@@ -231,7 +235,7 @@ export async function switchOrganization(orgId: string) {
     await connectToDatabase();
 
     // Verify membership
-    const org: any = await Organization.findOne({ _id: orgId, members: session.userId } as any);
+    const org: any = await Organization.findOne({ _id: orgId, members: session.userId as string } as any);
     if (!org) return { error: 'Not a member of this organization' };
 
     // Create new session
@@ -242,7 +246,7 @@ export async function switchOrganization(orgId: string) {
     const key = new TextEncoder().encode(SECRET_KEY);
 
     const expires = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    const newSessionToken = await new SignJWT({ userId: session.userId, orgId: org._id.toString() })
+    const newSessionToken = await new SignJWT({ userId: session.userId as string, orgId: org._id.toString() })
         .setProtectedHeader({ alg: 'HS256' })
         .setIssuedAt()
         .setExpirationTime('24h')

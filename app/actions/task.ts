@@ -14,11 +14,11 @@ export async function getBoardData(orgId?: string, projectId?: string) {
 
         await connectToDatabase();
 
-        const targetOrgId = orgId || session.orgId;
+        const targetOrgId = orgId || session.orgId as string;
 
         // Verify membership if orgId is provided and different
-        if (orgId && orgId !== session.orgId) {
-            const isMember = await Organization.exists({ _id: orgId, members: session.userId });
+        if (orgId && orgId !== session.orgId as string) {
+            const isMember = await Organization.exists({ _id: orgId, members: session.userId as string });
             if (!isMember) return { project: null, columns: {} };
         }
 
@@ -69,16 +69,23 @@ export async function getBoardData(orgId?: string, projectId?: string) {
 }
 
 export async function getOrgProjects(orgId: string) {
+    if (!orgId || orgId.length !== 24) return [];
+
     await connectToDatabase();
     const session = await getSession();
     if (!session) return [];
 
-    // Verify member
-    const isMember = await Organization.exists({ _id: orgId, members: session.userId });
-    if (!isMember) return [];
+    try {
+        // Verify member
+        const isMember = await Organization.exists({ _id: orgId, members: session.userId as string });
+        if (!isMember) return [];
 
-    const projects = await Project.find({ org_id: orgId }).sort({ createdAt: 1 }).lean();
-    return JSON.parse(JSON.stringify(projects));
+        const projects = await Project.find({ org_id: orgId }).sort({ createdAt: 1 }).lean();
+        return JSON.parse(JSON.stringify(projects));
+    } catch (error) {
+        console.error("Error in getOrgProjects:", error);
+        return [];
+    }
 }
 
 export async function createProject(prevState: any, formData: FormData) {
@@ -98,11 +105,11 @@ export async function createProject(prevState: any, formData: FormData) {
             name,
             key: projectKey,
             description,
-            org_id: session.orgId,
+            org_id: session.orgId as string,
             task_count: 0
         });
 
-        revalidatePath(`/${session.orgId}`);
+        revalidatePath(`/${session.orgId as string}`);
         return { success: true, projectId: project._id.toString() };
     } catch (e) {
         console.error(e);
@@ -152,7 +159,7 @@ export async function createTask(prevState: any, formData: FormData) {
 
     // Find the project for the current org and increment task count atomically
     const project: any = await Project.findOneAndUpdate(
-        { org_id: session.orgId } as any,
+        { org_id: session.orgId as string } as any,
         { $inc: { task_count: 1 } },
         { new: true } // Return updated document
     ).lean();
