@@ -7,6 +7,8 @@ import { getSession } from '@/app/actions/auth';
 import { Settings } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import { User } from '@/app/models';
+import connectToDatabase from '@/app/lib/db';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +16,15 @@ export default async function DashboardPage({ params, searchParams }: { params: 
     const { orgId } = await params;
     const { projectId } = await searchParams;
     const session = await getSession();
+    let isSandbox = false;
+
+    if (session) {
+        await connectToDatabase();
+        const user = await User.findById(session.userId);
+        if (user && user.email.startsWith('demo-')) {
+            isSandbox = true;
+        }
+    }
     // Pass orgId and projectId to getBoardData
     const { project, columns } = await getBoardData(orgId, projectId);
 
@@ -64,7 +75,7 @@ export default async function DashboardPage({ params, searchParams }: { params: 
                         </Button>
                     </Link>
                     <CreateTaskDialog projectId={project._id} />
-                    <InviteMemberButton orgId={orgId} />
+                    <InviteMemberButton orgId={orgId} isSandbox={isSandbox} />
                 </div>
             </div>
 

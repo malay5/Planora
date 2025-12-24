@@ -1,5 +1,9 @@
 import { Sidebar } from '@/app/components/Sidebar';
 import { UserNav } from '@/app/components/UserNav';
+import { getSession } from '@/app/actions/auth';
+import { SandboxBanner } from '@/app/components/SandboxBanner';
+import { User } from '@/app/models';
+import connectToDatabase from '@/app/lib/db';
 
 export default async function DashboardLayout({
     children,
@@ -9,9 +13,20 @@ export default async function DashboardLayout({
     params: Promise<{ orgId: string }>;
 }) {
     const { orgId } = await params;
+    const session = await getSession();
+    let isSandbox = false;
+
+    if (session) {
+        await connectToDatabase();
+        const user = await User.findById(session.userId);
+        if (user && user.email.startsWith('demo-')) {
+            isSandbox = true;
+        }
+    }
 
     return (
         <div className="min-h-screen flex bg-background text-foreground">
+            <SandboxBanner isSandbox={isSandbox} />
             <Sidebar orgId={orgId} />
 
             {/* Main Content */}
